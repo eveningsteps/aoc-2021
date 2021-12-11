@@ -1,6 +1,15 @@
 use std::collections::HashMap;
 use std::io;
 
+use structopt::StructOpt;
+
+#[derive(StructOpt)]
+struct Cli {
+    /// Which board we are looking for
+    #[structopt(short, long)]
+    part: i32,
+}
+
 #[derive(Debug)]
 struct Cell {
     pub num: i32,
@@ -132,8 +141,32 @@ fn solve(numbers: &Vec<i32>, boards: &mut Vec<Board>) -> i32 {
     0
 }
 
+fn solve2(numbers: &Vec<i32>, boards: &mut Vec<Board>) -> i32 {
+    let mut winners = vec![];
+    for i in numbers {
+        for (board_num, b) in boards.iter_mut().enumerate().filter(|b| -> bool {
+            !b.1.check_winning_condition()
+        }) {
+            b.add(i);
+            if b.check_winning_condition() {
+                winners.push((board_num, i));
+            }
+        }
+    }
+    if let Some((board_idx, n)) = winners.last() {
+        boards[*board_idx].score(n)
+    } else {
+        0
+    }
+}
+
 fn main() {
+    let args = Cli::from_args();
     let (numbers, mut boards) = read_input();
-    let answer = solve(&numbers, &mut boards);
+    let answer = if args.part == 1 {
+        solve(&numbers, &mut boards)
+    } else {
+        solve2(&numbers, &mut boards)
+    };
     println!("{}", answer);
 }
