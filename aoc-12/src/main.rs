@@ -2,6 +2,14 @@ use std::collections::{HashMap,HashSet};
 use std::io;
 use std::io::prelude::*;
 
+use structopt::StructOpt;
+
+#[derive(StructOpt)]
+struct Cli {
+    #[structopt(long, short)]
+    part: i32,
+}
+
 const START: &str = "start";
 const END: &str = "end";
 
@@ -18,9 +26,13 @@ fn read_input() -> Graph {
     map
 }
 
-fn dfs(m: &Graph, v: &HashSet<String>, node: &String) -> i32 {
+fn is_reentrable(s: &String) -> bool {
+    s.chars().next().unwrap().is_ascii_uppercase()
+}
+
+fn dfs(m: &Graph, v: &HashSet<String>, node: &String, golden_node_used: bool) -> i32 {
     let mut visited = v.clone();
-    if !node.chars().next().unwrap().is_ascii_uppercase() {
+    if !is_reentrable(node) {
         visited.insert(node.to_owned());
     }
 
@@ -30,22 +42,36 @@ fn dfs(m: &Graph, v: &HashSet<String>, node: &String) -> i32 {
 
     let mut local_sum = 0;
     for adjacent_node in m.get(node).unwrap().iter() {
-        if visited.contains(adjacent_node) {
+        if adjacent_node == START {
             continue;
         }
-        local_sum += dfs(m, &visited, adjacent_node);
+
+        let adjacent_visited = visited.contains(adjacent_node);
+        if adjacent_visited {
+            if golden_node_used {
+                continue;
+            } else {
+                // give the second chance
+                let mut visited_but_with_second_chance = visited.clone();
+                visited_but_with_second_chance.remove(adjacent_node);
+                local_sum += dfs(m, &visited_but_with_second_chance, adjacent_node, true);
+            }
+        } else {
+            local_sum += dfs(m, &visited, adjacent_node, golden_node_used);
+        }
     }
     return local_sum;
 }
 
-fn solve(map: &Graph) -> i32 {
+fn solve(map: &Graph, use_single_reentrable_small_cave: bool) -> i32 {
     let visited = HashSet::new();
     let start = START.to_string();
-    dfs(map, &visited, &start)
+    dfs(map, &visited, &start, use_single_reentrable_small_cave)
 }
 
 fn main() {
+    let args = Cli::from_args();
     let input = read_input();
-    let answer = solve(&input);
+    let answer = solve(&input, args.part == 1);
     println!("{}", answer);
 }
